@@ -1,0 +1,150 @@
+Strands Agent Workshop: Run Locally with Amazon Bedrock
+========================================================
+
+This guide runs agent.py locally from this folder. The agent calls the Amazon
+Nova Lite inference profile eu.amazon.nova-lite-v1:0 in eu-north-1.
+The weather tool returns fixed demo text; it does not look up live weather.
+
+Prerequisites
+-------------
+
+- Windows PowerShell
+- Python 3.10 or newer. Python 3.13 is used in the commands below.
+- AWS CLI installed and configured with credentials for your personal AWS
+  account. Do not create access keys for the AWS root user. Keep credentials
+  private and do not commit them to source control.
+- An AWS identity with permission to invoke the Bedrock model in eu-north-1.
+- The Amazon Nova Lite inference profile must be available to your account in
+  eu-north-1. Check Amazon Bedrock in the AWS console if invocation is denied.
+
+1. Open this folder in PowerShell
+---------------------------------
+
+From the repository root, run:
+
+    Set-Location C:\Dev\udemy-agent-core\agent-core-test
+
+2. Verify AWS credentials
+-------------------------
+
+Run:
+
+    aws sts get-caller-identity
+    aws configure get region
+
+The first command should show the AWS identity configured on this computer.
+Do not share its credentials. The agent uses the same AWS CLI credentials
+through boto3. The script explicitly selects eu-north-1, regardless of the
+default region printed by the second command.
+
+If credentials are not configured, run:
+
+    aws configure
+
+Enter the access key ID, secret access key, and a default region when prompted.
+Use credentials from a dedicated IAM identity with only the permissions you
+need. Never paste keys into this file or into chat.
+
+3. Check the installed Python version
+-------------------------------------
+
+List Python runtimes detected by the Windows launcher:
+
+    py --list
+
+If Python 3.13 is listed, use the commands below. Otherwise, replace 3.13 with
+an installed Python version that is 3.10 or newer.
+
+4. Create an isolated environment and install dependencies
+----------------------------------------------------------
+
+Run these commands from agent-core-test:
+
+    py -3.13 -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install --upgrade pip
+    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+The .venv folder keeps this project's Python packages separate from other
+projects. Calling its python.exe directly means PowerShell activation is not
+required. requirements.txt installs strands-agents, strands-agents-tools, and
+boto3.
+
+5. Run the agent
+----------------
+
+Run a prompt from this folder:
+
+    .\.venv\Scripts\python.exe .\agent.py --prompt "Calculate 24 times 7 and tell me the weather."
+
+The request invokes a Bedrock model and may incur AWS charges. The calculator
+tool evaluates the calculation; the weather tool returns the script's demo
+message.
+
+6. Troubleshooting
+------------------
+
+"No suitable Python runtime found":
+    Run py --list. Use an installed version, such as py -3.13, or install a
+    supported Python version before creating the environment.
+
+"Activate.ps1 is not recognized" or the .venv Python path is missing:
+    Confirm PowerShell is in agent-core-test with Get-Location, then create
+    the environment using py -3.13 -m venv .venv. You can skip activation and
+    run the .venv\Scripts\python.exe commands above.
+
+"No module named strands" or another missing package:
+    Install dependencies into the project's environment:
+    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+AWS authentication or access denied errors:
+    Run aws sts get-caller-identity to confirm which identity is active. Check
+    that this identity has Bedrock model invocation permissions and that the
+    Nova Lite profile is available in eu-north-1.
+
+Anthropic use-case-details error:
+    The current script uses Amazon Nova Lite, not Anthropic. If you change the
+    model to Anthropic, complete the Anthropic use-case details form in Amazon
+    Bedrock for your account, then wait for AWS to process it before retrying.
+
+Calculator deprecation warning:
+    This warning comes from the installed Strands tools package and is not the
+    Bedrock access error. The calculator tool may continue to work despite the
+    warning.
+
+7. Deploy the AgentCore Runtime version
+---------------------------------------
+
+The AgentCore version is in chapter_2_agent_core. It accepts a JSON payload
+with a prompt and returns a JSON response. Deploy it from PowerShell with:
+
+    Set-Location C:\Dev\udemy-agent-core\agent-core-test\chapter_2_agent_core
+    py -3.13 -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install --upgrade pip
+    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+    .\.venv\Scripts\python.exe .\deploy_agentcore.py
+
+The deployment script targets Python 3.12 in AgentCore and defaults to
+eu-north-1 when no AWS CLI region is configured. It automatically creates an
+AgentCore execution role and an S3 staging bucket. Deployment requires AWS
+permissions to create these resources and pass the execution role. The runtime
+execution role must be allowed to invoke the Nova Lite inference profile.
+Review the resources and possible AWS charges before deploying.
+
+After deployment reports READY, copy the Agent ARN printed by the script. In
+the Amazon Bedrock console, open the AgentCore Runtime in eu-north-1 and use its
+test/invoke interface with a JSON payload such as:
+
+    {"prompt": "Calculate 24 times 7 and tell me the weather."}
+
+The deployed runtime uses its AWS execution role to call Bedrock; it does not
+use your local AWS credentials after deployment.
+
+About CDK
+---------
+
+AWS CDK is not required for the local script or this AgentCore toolkit
+deployment. The toolkit configures and deploys the runtime directly. CDK is
+another option if you want to define AWS infrastructure as code.
+
+
+.\.venv\Scripts\python.exe .\agent.py

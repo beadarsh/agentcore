@@ -1,0 +1,164 @@
+Chapter 3: Deploy the agent with the AgentCore CLI (@aws/agentcore)
+===================================================================
+
+The AgentCore CLI replaces the Starter Toolkit used in chapter 2. It creates a
+project, then deploys it to AWS with CDK. The agent code in agent_source/ is the
+same Strands agent as chapter 2 (Nova Lite in eu-north-1), so you bring your own
+code into the project instead of generating a template.
+
+Files in this folder
+--------------------
+agent_source\main.py          Agent entrypoint (BedrockAgentCoreApp)
+agent_source\pyproject.toml   Python dependencies used by the CLI (uv)
+instructions.txt              This file
+
+1. Prerequisites
+----------------
+- Node.js 20 or later:        node --version
+- uv:                         uv --version      (already installed in chapter 2)
+- AWS CLI credentials:        aws sts get-caller-identity
+- AWS CDK:                    cdk --version     (the CLI deploys with CDK)
+
+If cdk is not recognized, install it with npm, then open a new terminal:
+
+    npm install -g aws-cdk
+    cdk --version
+
+If npm reports EPERM or access denied, its global folder is not writable. Use a
+user folder instead, then reinstall (also needed for step 2):
+
+    npm config set prefix "$env:APPDATA\npm"
+    [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:APPDATA\npm", "User")
+
+Bootstrap CDK once per account and region. Skip this if you already did it:
+
+    $account = aws sts get-caller-identity --query Account --output text
+    cdk bootstrap aws://$account/eu-north-1
+
+2. Install the AgentCore CLI
+----------------------------
+Both the old Starter Toolkit and the new CLI provide a command called
+"agentcore". Your chapter 2 virtual environment contains the old one, so leave
+that environment first. Run this in a terminal where (.venv) is NOT shown:
+
+    deactivate
+    npm install -g @aws/agentcore
+    Get-Command agentcore
+    agentcore --version
+
+Get-Command must point to the npm global folder, not to a .venv\Scripts folder.
+If it still shows .venv, open a new terminal and run the commands there.
+
+3. Create the project
+---------------------
+Run these from this folder. --no-agent creates an empty project; the project
+name must start with a letter, be alphanumeric, and be at most 23 characters.
+
+    Set-Location C:\Dev\udemy-agent-core\agent-core-test\chapter_3_agentcore_cli
+    agentcore create --name Chapter3 --no-agent
+    Set-Location .\Chapter3
+
+The project folder looks like this:
+
+    Chapter3\
+      agentcore\            agentcore.json, aws-targets.json, cdk\
+      app\                  application code
+
+4. Add the Python files
+-----------------------
+Copy the agent source into the project's app folder, then register it as an
+existing-code (byo) agent. Run these from the Chapter3 project folder:
+
+    New-Item -ItemType Directory -Force .\app\Chapter3Agent | Out-Null
+    Copy-Item ..\agent_source\* .\app\Chapter3Agent\ -Recurse
+
+    agentcore add agent `
+      --name Chapter3Agent `
+      --type byo `
+      --code-location ./app/Chapter3Agent `
+      --entrypoint main.py `
+      --language Python `
+      --framework Strands `
+      --model-provider Bedrock
+
+The CLI rejects the command with "--framework is required" without the last two
+flags. If it asks for another flag, such as --memory, add it (--memory none
+disables agent memory).
+
+5. Check the deployment region
+------------------------------
+agentcore\aws-targets.json is created empty ([]), so it must hold a deployment
+target before you deploy. Replace its contents with your account ID and the
+region of the Bedrock model in main.py (eu-north-1):
+
+    $account = aws sts get-caller-identity --query Account --output text
+    '[{"name":"default","account":"' + $account + '","region":"eu-north-1"}]' | Set-Content .\agentcore\aws-targets.json
+
+Or edit the file by hand:
+
+    [
+      {
+        "name": "default",
+        "description": "Personal account (eu-north-1)",
+        "account": "<12-digit account id>",
+        "region": "eu-north-1"
+      }
+    ]
+
+Then validate the project:
+
+    agentcore validate
+
+6. Test locally (optional)
+--------------------------
+This starts a local dev server and calls Bedrock with your AWS credentials, so it
+may incur a small charge.
+
+    agentcore dev
+
+In another terminal, from the Chapter3 folder:
+
+    agentcore dev "Calculate 24 times 7 and tell me the weather." --stream
+
+7. Deploy to AWS
+----------------
+Preview first, then deploy. This creates AWS resources through CDK and may incur
+charges.
+
+    agentcore deploy --dry-run
+    agentcore deploy -y
+
+8. Test the deployed agent
+--------------------------
+    agentcore status
+    agentcore invoke "Calculate 24 times 7 and tell me the weather."
+
+Expected: an answer containing 168 and the demo weather text, "Very cold".
+
+9. Logs and troubleshooting
+---------------------------
+    agentcore logs
+    agentcore logs --since 1h --level error
+    agentcore traces list
+
+- "uv is required" or "zip not found": the CLI also packages Python code with uv.
+  Confirm uv --version works in the same terminal.
+- CDK bootstrap error: run the cdk bootstrap command from step 1.
+- AccessDenied from Bedrock: the runtime's execution role needs permission to
+  invoke the Nova Lite model in eu-north-1.
+- Wrong "agentcore" command (Starter Toolkit output): see step 2.
+
+10. Clean up
+------------
+Remove the deployed resources when you no longer need them. This is
+destructive, so check the preview first. "remove all" only clears the resources
+from the local project config; the final deploy applies the removal in AWS and
+deletes the deployed resources:
+
+    agentcore remove all --dry-run
+    agentcore remove all -y
+    agentcore deploy -y
+
+The chapter 2 runtime (chapter_2_agent) is separate and is not removed by this.
+
+Command reference: https://github.com/aws/agentcore-cli/blob/main/docs/commands.md

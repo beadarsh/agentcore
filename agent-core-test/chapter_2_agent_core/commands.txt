@@ -1,0 +1,50 @@
+Commands used in this workshop (PowerShell, Windows)
+=====================================================
+
+AWS setup and checks
+--------------------
+aws --version
+aws configure                              # access key, secret key, region, output format: json
+aws sts get-caller-identity                # confirm the active AWS identity
+aws configure get region                   # showed eu-north-1
+aws bedrock list-inference-profiles --region eu-north-1 --query "inferenceProfileSummaries[].{id:inferenceProfileId,name:inferenceProfileName,status:status}" --output table
+
+Local agent: agent-core-test
+----------------------------
+Set-Location C:\Dev\udemy-agent-core\agent-core-test
+py -3.12 -m venv .venv                     # failed: Python 3.12 not installed
+py --list                                  # list installed Python versions
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe .\agent.py --prompt "Calculate 24 times 7 and tell me the weather."
+
+Optional: activate the virtual environment
+------------------------------------------
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+
+AgentCore deployment: chapter_2_agent_core
+------------------------------------------
+Set-Location C:\Dev\udemy-agent-core\agent-core-test\chapter_2_agent_core
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe .\deploy_agentcore.py
+
+Deployment prerequisites
+------------------------
+winget install --id=astral-sh.uv -e        # fixes: uv is required for direct_code_deploy
+uv --version
+winget install --id GnuWin32.Zip -e        # fixes: zip utility is required for direct_code_deploy
+$env:Path += ";C:\Program Files (x86)\GnuWin32\bin"    # zip.exe was not on PATH; this applies to the current terminal only
+zip -v
+
+Make the zip PATH change permanent (optional; open a new terminal afterwards)
+-----------------------------------------------------------------------------
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";C:\Program Files (x86)\GnuWin32\bin", "User")
+
+Check zip installation and PATH
+-------------------------------
+Get-Command zip -ErrorAction SilentlyContinue | Select-Object Source
+Test-Path "C:\Program Files (x86)\GnuWin32\bin\zip.exe"
