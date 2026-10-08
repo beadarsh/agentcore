@@ -161,4 +161,35 @@ deletes the deployed resources:
 
 The chapter 2 runtime (chapter_2_agent) is separate and is not removed by this.
 
+TypeScript agent: Chapter3TS
+----------------------------
+The Chapter3 project also has a TypeScript Strands agent in
+app\Chapter3TS\main.ts. It uses the EU Nova Lite profile and has calculator
+and demo weather tools. Node.js 22 and npm are required; the CLI installs the
+agent's npm dependencies when needed.
+
+From the Chapter3 project folder, start the local server in one terminal:
+
+    agentcore dev --runtime Chapter3TS --logs
+
+In a second terminal, from the same project folder, invoke it:
+
+    agentcore dev "Calculate 24 times 7 and tell me the weather." --runtime Chapter3TS --stream
+
+The response should contain 168 and "Very cold". Stop the server with Ctrl+C.
+The invoke calls Bedrock and may incur charges.
+
+To build the TypeScript source directly:
+
+    Push-Location .\app\Chapter3TS
+    npm run build
+    Pop-Location
+
+To deploy and test the TypeScript runtime in AWS, from the Chapter3 project
+folder:
+
+    agentcore deploy --dry-run
+    agentcore deploy -y
+    agentcore invoke --runtime Chapter3TS "Calculate 24 times 7 and tell me the weather."
+
 Command reference: https://github.com/aws/agentcore-cli/blob/main/docs/commands.md

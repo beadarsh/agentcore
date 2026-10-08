@@ -1,0 +1,18 @@
+{
+  "name": "agent-core-test-typescript-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "agent": "tsx agent.ts"
+  },
+  "dependencies": {
+    "@strands-agents/sdk": "^1.5.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
